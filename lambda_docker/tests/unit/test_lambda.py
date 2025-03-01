@@ -5,10 +5,13 @@ import os
 import sys
 import json
 import pytest
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 import boto3
 from boto3.session import Session
+import importlib
 
 # Add the project root to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -125,3 +128,56 @@ def test_aws_profile_authentication(mock_boto3_session):
     with patch.dict('os.environ', {'AWS_PROFILE': ''}):
         session_args = get_boto3_session_args()
         assert 'profile_name' not in session_args
+
+def test_custom_app_location():
+    """Test custom application location."""
+    # Import the config module
+    from lambda_docker.deployment import config
+    
+    # Save original environment
+    original_app_location = os.environ.get('APP_LOCATION', '')
+    
+    try:
+        # Create a temporary directory with a Dockerfile
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create a Dockerfile in the temporary directory
+            dockerfile_path = Path(temp_dir) / "Dockerfile"
+            with open(dockerfile_path, "w") as f:
+                f.write("FROM python:3.11-slim\n")
+            
+            # Test with APP_LOCATION set
+            with patch.dict('os.environ', {'APP_LOCATION': temp_dir}):
+                # Reload the config module to apply the new APP_LOCATION
+                importlib.reload(config)
+                
+                # Validate the application location
+                assert config.APP_LOCATION == temp_dir
+                assert config.DOCKERFILE_PATH == dockerfile_path
+                assert config.validate_app_location() == True
+        
+        # Test with invalid APP_LOCATION
+        with patch.dict('os.environ', {'APP_LOCATION': '/invalid/path'}):
+            # Reload the config module to apply the new APP_LOCATION
+            importlib.reload(config)
+            
+            # Validate the application location
+            assert config.validate_app_location() == False
+        
+        # Test with APP_LOCATION not set
+        with patch.dict('os.environ', {'APP_LOCATION': ''}):
+            # Reload the config module to apply the new APP_LOCATION
+            importlib.reload(config)
+            
+            # Validate the application location
+            assert config.APP_LOCATION is None
+            assert config.validate_app_location() == True
+    
+    finally:
+        # Restore original environment
+        if original_app_location:
+            os.environ['APP_LOCATION'] = original_app_location
+        else:
+            os.environ.pop('APP_LOCATION', None)
+        
+        # Reload the config module to restore original state
+        importlib.reload(config)

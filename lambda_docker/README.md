@@ -126,6 +126,28 @@ LOG_FILE_PATH=/tmp/lambda_deployment.log
 
 ## Deployment
 
+### Custom Dockerfile Location
+
+This project supports specifying a custom Dockerfile location for deployment. You can provide the path to a directory containing a Dockerfile using either:
+
+1. Environment variable in the `.env` file:
+```
+APP_LOCATION=/path/to/application/directory
+```
+
+2. Command-line argument:
+```bash
+python deployment/deploy.py --app-location /path/to/application/directory
+```
+
+When a custom location is specified, the deployment scripts will:
+- Look for a Dockerfile in the specified directory
+- Build the Docker image from that directory
+- Upload the image to ECR
+- Update the Lambda function with the new image
+
+If no custom location is specified, the deployment scripts will use the default location (the `lambda_docker` directory).
+
 ### AWS Profile Authentication
 
 This project supports AWS profile-based authentication for secure multi-environment deployments. You can specify an AWS profile in the `.env` file:
@@ -214,6 +236,7 @@ The Lambda function and deployment scripts use different logging configurations:
 | AWS_REGION | AWS region for deployment | us-east-1 |
 | AWS_ACCOUNT_ID | AWS account ID | (required) |
 | AWS_PROFILE | AWS profile name for authentication | None (uses default credentials) |
+| APP_LOCATION | Path to directory containing Dockerfile | None (uses default location) |
 | ECR_REPOSITORY_NAME | ECR repository name | lambda-docker |
 | ECR_IMAGE_TAG | Docker image tag | latest |
 | LAMBDA_FUNCTION_NAME | Lambda function name | lambda-docker-function |
