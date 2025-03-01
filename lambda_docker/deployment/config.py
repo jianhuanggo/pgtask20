@@ -41,6 +41,11 @@ APP_LOCATION = os.environ.get("APP_LOCATION", None)
 LAMBDA_FUNCTION_NAME = os.environ.get("LAMBDA_FUNCTION_NAME", "lambda-docker-function")
 LAMBDA_MEMORY_SIZE = int(os.environ.get("LAMBDA_MEMORY_SIZE", "128"))
 LAMBDA_TIMEOUT = int(os.environ.get("LAMBDA_TIMEOUT", "30"))
+
+# API Gateway Configuration
+API_GATEWAY_NAME = os.environ.get("API_GATEWAY_NAME", f"{LAMBDA_FUNCTION_NAME}-api")
+API_GATEWAY_DESCRIPTION = os.environ.get("API_GATEWAY_DESCRIPTION", f"REST API for {LAMBDA_FUNCTION_NAME}")
+API_GATEWAY_STAGE_NAME = os.environ.get("API_GATEWAY_STAGE_NAME", "prod")
 LAMBDA_ENVIRONMENT = {
     "Variables": {
         "ENVIRONMENT": os.environ.get("ENVIRONMENT", "development"),

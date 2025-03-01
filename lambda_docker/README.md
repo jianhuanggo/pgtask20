@@ -9,6 +9,7 @@ This project provides a production-grade solution for deploying Docker container
 - **Structured JSON logging** for better log analysis
 - **Deployment scripts** for AWS ECR and Lambda
 - **AWS profile-based authentication** for secure multi-environment deployments
+- **API Gateway integration** for REST API access
 - **Local testing capabilities** for Lambda functions
 - **Error handling and monitoring** with detailed logging
 - **Environment-based configuration** for different deployment stages
@@ -212,6 +213,80 @@ cd lambda_docker
 pytest tests/unit/
 ```
 
+## API Gateway Integration
+
+This project supports exposing the Lambda Docker function through API Gateway for REST API access. The deployment scripts will:
+
+1. Create an API Gateway REST API
+2. Create resources and methods for the API
+3. Set up Lambda integration for the methods
+4. Deploy the API to a stage
+5. Configure permissions for API Gateway to invoke the Lambda function
+
+### API Endpoints
+
+The API Gateway integration provides the following REST endpoints:
+
+- **GET /api**: Retrieve data from the Lambda function
+- **POST /api**: Create new data using the Lambda function
+- **PUT /api**: Update existing data using the Lambda function
+- **DELETE /api**: Delete data using the Lambda function
+
+All endpoints return JSON responses with the following structure:
+
+```json
+{
+  "message": "Request processed successfully",
+  "timestamp": "2025-03-01T20:37:38.123456",
+  "request_id": "12345678-1234-1234-1234-123456789012",
+  "environment": "development"
+}
+```
+
+### Configuration
+
+You can configure the API Gateway integration using the following environment variables:
+
+```
+API_GATEWAY_NAME=lambda-docker-function-api
+API_GATEWAY_DESCRIPTION=REST API for Lambda Docker Function
+API_GATEWAY_STAGE_NAME=prod
+```
+
+### Deployment
+
+To deploy the API Gateway integration:
+
+```bash
+cd lambda_docker
+python deployment/deploy_api_gateway.py --env-file deployment/.env
+```
+
+To delete the API Gateway:
+
+```bash
+cd lambda_docker
+python deployment/deploy_api_gateway.py --env-file deployment/.env --delete
+```
+
+### Testing
+
+Once deployed, you can test the API using the following endpoints:
+
+- GET: `https://{api_id}.execute-api.{region}.amazonaws.com/{stage_name}/api`
+- POST: `https://{api_id}.execute-api.{region}.amazonaws.com/{stage_name}/api`
+- PUT: `https://{api_id}.execute-api.{region}.amazonaws.com/{stage_name}/api`
+- DELETE: `https://{api_id}.execute-api.{region}.amazonaws.com/{stage_name}/api`
+
+Replace `{api_id}`, `{region}`, and `{stage_name}` with your actual values.
+
+You can also use the provided integration test script:
+
+```bash
+cd lambda_docker
+python tests/integration/test_api_gateway.py --api-url https://{api_id}.execute-api.{region}.amazonaws.com/{stage_name}
+```
+
 ## Logging Configuration
 
 The Lambda function and deployment scripts use different logging configurations:
@@ -239,6 +314,9 @@ The Lambda function and deployment scripts use different logging configurations:
 | APP_LOCATION | Path to directory containing Dockerfile | None (uses default location) |
 | ECR_REPOSITORY_NAME | ECR repository name | lambda-docker |
 | ECR_IMAGE_TAG | Docker image tag | latest |
+| API_GATEWAY_NAME | API Gateway REST API name | {LAMBDA_FUNCTION_NAME}-api |
+| API_GATEWAY_DESCRIPTION | API Gateway REST API description | REST API for {LAMBDA_FUNCTION_NAME} |
+| API_GATEWAY_STAGE_NAME | API Gateway deployment stage name | prod |
 | LAMBDA_FUNCTION_NAME | Lambda function name | lambda-docker-function |
 | LAMBDA_EXECUTION_ROLE | IAM role ARN for Lambda | (required) |
 | LAMBDA_MEMORY_SIZE | Lambda memory size in MB | 128 |
