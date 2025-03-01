@@ -33,6 +33,7 @@ def parse_arguments():
     parser.add_argument("--ecr-only", action="store_true", help="Deploy to ECR only")
     parser.add_argument("--lambda-only", action="store_true", help="Update Lambda only")
     parser.add_argument("--app-location", type=str, help="Path to application directory containing Dockerfile")
+    parser.add_argument("--recreate-ecr", action="store_true", help="Delete and recreate the ECR repository")
     return parser.parse_args()
 
 @log_method(level="info")
@@ -72,7 +73,9 @@ def main():
     # Deploy to ECR
     if not args.lambda_only:
         logger.info("Deploying to ECR...")
-        if not deploy_to_ecr():
+        if args.recreate_ecr:
+            logger.info("Recreating ECR repository before deployment")
+        if not deploy_to_ecr(recreate_repo=args.recreate_ecr):
             logger.error("Deployment to ECR failed")
             return False
     

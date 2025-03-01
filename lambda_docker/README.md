@@ -126,6 +126,31 @@ LOG_FILE_PATH=/tmp/lambda_deployment.log
 
 ## Deployment
 
+## ECR Repository Management
+
+This project provides scripts for managing ECR repositories:
+
+### Using the Deployment Script
+
+You can use the main deployment script with the `--recreate-ecr` flag to delete and recreate the ECR repository:
+
+```bash
+cd lambda_docker
+python deployment/deploy.py --env-file deployment/.env --recreate-ecr
+```
+
+### Using the Standalone Script
+
+You can also use the standalone script for more fine-grained control:
+
+```bash
+cd lambda_docker
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --check
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --delete --force
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --create
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --recreate --force
+```
+
 ### Custom Dockerfile Location
 
 This project supports specifying a custom Dockerfile location for deployment. You can provide the path to a directory containing a Dockerfile using either:
