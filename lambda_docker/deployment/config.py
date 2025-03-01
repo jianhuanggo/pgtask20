@@ -28,6 +28,7 @@ logger = get_logger(
 # AWS Configuration
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 AWS_ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
+AWS_PROFILE = os.environ.get("AWS_PROFILE", None)
 
 # ECR Configuration
 ECR_REPOSITORY_NAME = os.environ.get("ECR_REPOSITORY_NAME", "lambda-docker")
@@ -62,6 +63,20 @@ def get_image_uri():
     if not repo_uri:
         return None
     return f"{repo_uri}:{ECR_IMAGE_TAG}"
+
+def get_boto3_session_args():
+    """Get the arguments for creating a boto3 session."""
+    session_args = {
+        'region_name': AWS_REGION
+    }
+    
+    if AWS_PROFILE:
+        session_args['profile_name'] = AWS_PROFILE
+        logger.info(f"Using AWS profile: {AWS_PROFILE}")
+    else:
+        logger.info("Using default AWS credentials")
+    
+    return session_args
 
 def validate_config():
     """Validate the configuration."""
