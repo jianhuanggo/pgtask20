@@ -53,6 +53,39 @@ def run_command(command, cwd=None):
         raise
 
 @log_method(level="info")
+def delete_ecr_repository():
+    """Delete the ECR repository if it exists."""
+    try:
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        ecr_client = session.client('ecr')
+        
+        # Check if repository exists
+        try:
+            ecr_client.describe_repositories(repositoryNames=[ECR_REPOSITORY_NAME])
+            
+            # Repository exists, delete it
+            ecr_client.delete_repository(
+                repositoryName=ECR_REPOSITORY_NAME,
+                force=True  # Force deletion even if it contains images
+            )
+            
+            logger.info(f"Deleted ECR repository: {ECR_REPOSITORY_NAME}")
+            return True
+        except ecr_client.exceptions.RepositoryNotFoundException:
+            # Repository doesn't exist
+            logger.info(f"ECR repository {ECR_REPOSITORY_NAME} doesn't exist, nothing to delete")
+            return True
+    except Exception as e:
+        error_logger(
+            "delete_ecr_repository",
+            str(e),
+            logger=logger,
+            mode="error"
+        )
+        return False
+
+@log_method(level="info")
 def create_ecr_repository_if_not_exists():
     """Create the ECR repository if it doesn't exist."""
     try:
@@ -77,6 +110,31 @@ def create_ecr_repository_if_not_exists():
     except Exception as e:
         error_logger(
             "create_ecr_repository_if_not_exists",
+            str(e),
+            logger=logger,
+            mode="error"
+        )
+        return False
+
+@log_method(level="info")
+def recreate_ecr_repository():
+    """Delete the ECR repository if it exists and create a new one."""
+    try:
+        # Delete repository if it exists
+        if not delete_ecr_repository():
+            logger.error("Failed to delete ECR repository")
+            return False
+        
+        # Create repository
+        if not create_ecr_repository_if_not_exists():
+            logger.error("Failed to create ECR repository")
+            return False
+        
+        logger.info(f"Successfully recreated ECR repository: {ECR_REPOSITORY_NAME}")
+        return True
+    except Exception as e:
+        error_logger(
+            "recreate_ecr_repository",
             str(e),
             logger=logger,
             mode="error"
@@ -203,15 +261,22 @@ def tag_and_push_image():
         return False
 
 @log_method(level="info")
-def deploy_to_ecr():
+def deploy_to_ecr(recreate_repo=False):
     """Main function to deploy the Docker image to ECR."""
     start_time = time.time()
     logger.info(f"Starting deployment to ECR: {ECR_REPOSITORY_NAME}")
     
-    # Create repository if it doesn't exist
-    if not create_ecr_repository_if_not_exists():
-        logger.error("Failed to create ECR repository")
-        return False
+    # Create or recreate repository
+    if recreate_repo:
+        logger.info(f"Recreating ECR repository: {ECR_REPOSITORY_NAME}")
+        if not recreate_ecr_repository():
+            logger.error("Failed to recreate ECR repository")
+            return False
+    else:
+        # Create repository if it doesn't exist
+        if not create_ecr_repository_if_not_exists():
+            logger.error("Failed to create ECR repository")
+            return False
     
     # Login to ECR
     if not login_to_ecr():
@@ -233,4 +298,18 @@ def deploy_to_ecr():
     return True
 
 if __name__ == "__main__":
-    deploy_to_ecr()
+    import argparse
+    
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Deploy Docker image to ECR")
+    parser.add_argument("--recreate-repo", action="store_true", help="Delete and recreate the ECR repository")
+    parser.add_argument("--env-file", type=str, help="Path to .env file")
+    args = parser.parse_args()
+    
+    # Load environment variables from .env file if specified
+    if args.env_file:
+        from dotenv import load_dotenv
+        load_dotenv(args.env_file)
+    
+    # Deploy to ECR
+    deploy_to_ecr(recreate_repo=args.recreate_repo)
