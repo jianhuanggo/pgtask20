@@ -5,6 +5,7 @@ import os
 import sys
 import boto3
 import time
+from boto3.session import Session
 
 # Add the project root to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -12,7 +13,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 # Import the deployment config and logging
 from lambda_docker.deployment.config import (
     AWS_REGION, LAMBDA_FUNCTION_NAME, LAMBDA_MEMORY_SIZE,
-    LAMBDA_TIMEOUT, LAMBDA_ENVIRONMENT, get_image_uri
+    LAMBDA_TIMEOUT, LAMBDA_ENVIRONMENT, get_image_uri,
+    get_boto3_session_args
 )
 from _logging.pg_logger import get_logger, log_method, error_logger
 
@@ -29,7 +31,9 @@ logger = get_logger(
 def lambda_function_exists():
     """Check if the Lambda function exists."""
     try:
-        lambda_client = boto3.client('lambda', region_name=AWS_REGION)
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        lambda_client = session.client('lambda')
         lambda_client.get_function(FunctionName=LAMBDA_FUNCTION_NAME)
         logger.info(f"Lambda function {LAMBDA_FUNCTION_NAME} exists")
         return True
@@ -49,7 +53,9 @@ def lambda_function_exists():
 def create_lambda_function():
     """Create a new Lambda function."""
     try:
-        lambda_client = boto3.client('lambda', region_name=AWS_REGION)
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        lambda_client = session.client('lambda')
         image_uri = get_image_uri()
         
         if not image_uri:
@@ -84,7 +90,9 @@ def create_lambda_function():
 def update_lambda_function():
     """Update an existing Lambda function."""
     try:
-        lambda_client = boto3.client('lambda', region_name=AWS_REGION)
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        lambda_client = session.client('lambda')
         image_uri = get_image_uri()
         
         if not image_uri:
@@ -121,7 +129,9 @@ def update_lambda_function():
 def wait_for_function_update():
     """Wait for the Lambda function update to complete."""
     try:
-        lambda_client = boto3.client('lambda', region_name=AWS_REGION)
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        lambda_client = session.client('lambda')
         
         logger.info(f"Waiting for Lambda function {LAMBDA_FUNCTION_NAME} update to complete...")
         waiter = lambda_client.get_waiter('function_updated')

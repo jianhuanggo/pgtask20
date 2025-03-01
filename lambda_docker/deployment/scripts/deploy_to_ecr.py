@@ -6,6 +6,7 @@ import sys
 import subprocess
 import boto3
 import time
+from boto3.session import Session
 
 # Add the project root to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -13,7 +14,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 # Import the deployment config and logging
 from lambda_docker.deployment.config import (
     AWS_REGION, ECR_REPOSITORY_NAME, ECR_IMAGE_TAG,
-    DOCKERFILE_PATH, PROJECT_ROOT, get_ecr_repository_uri, get_image_uri
+    DOCKERFILE_PATH, PROJECT_ROOT, get_ecr_repository_uri, get_image_uri,
+    get_boto3_session_args
 )
 from _logging.pg_logger import get_logger, log_method, error_logger
 
@@ -54,7 +56,9 @@ def run_command(command, cwd=None):
 def create_ecr_repository_if_not_exists():
     """Create the ECR repository if it doesn't exist."""
     try:
-        ecr_client = boto3.client('ecr', region_name=AWS_REGION)
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        ecr_client = session.client('ecr')
         
         # Check if repository exists
         try:
@@ -83,7 +87,9 @@ def create_ecr_repository_if_not_exists():
 def get_ecr_login_command():
     """Get the ECR login command."""
     try:
-        ecr_client = boto3.client('ecr', region_name=AWS_REGION)
+        # Create a session with the profile if specified
+        session = Session(**get_boto3_session_args())
+        ecr_client = session.client('ecr')
         token = ecr_client.get_authorization_token()
         
         username, password = token['authorizationData'][0]['authorizationToken'].split(':')

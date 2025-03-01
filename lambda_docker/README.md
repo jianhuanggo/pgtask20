@@ -8,6 +8,7 @@ This project provides a production-grade solution for deploying Docker container
 - **Comprehensive logging** using the PGLogger module
 - **Structured JSON logging** for better log analysis
 - **Deployment scripts** for AWS ECR and Lambda
+- **AWS profile-based authentication** for secure multi-environment deployments
 - **Local testing capabilities** for Lambda functions
 - **Error handling and monitoring** with detailed logging
 - **Environment-based configuration** for different deployment stages
@@ -105,6 +106,7 @@ cp deployment/.env.example deployment/.env
 # AWS Configuration
 AWS_REGION=us-east-1
 AWS_ACCOUNT_ID=123456789012
+AWS_PROFILE=production
 
 # ECR Configuration
 ECR_REPOSITORY_NAME=lambda-docker
@@ -123,6 +125,21 @@ LOG_FILE_PATH=/tmp/lambda_deployment.log
 ```
 
 ## Deployment
+
+### AWS Profile Authentication
+
+This project supports AWS profile-based authentication for secure multi-environment deployments. You can specify an AWS profile in the `.env` file:
+
+```
+AWS_PROFILE=production
+```
+
+When AWS_PROFILE is set, the deployment scripts will use the specified profile for authentication. If AWS_PROFILE is not set, the scripts will use the default AWS credentials.
+
+This allows you to:
+- Use different AWS credentials for different environments (dev, staging, production)
+- Leverage AWS named profiles for secure credential management
+- Avoid hardcoding AWS credentials in your configuration
 
 ### Deploy to ECR and Lambda
 
@@ -196,6 +213,7 @@ The Lambda function and deployment scripts use different logging configurations:
 |----------|-------------|---------|
 | AWS_REGION | AWS region for deployment | us-east-1 |
 | AWS_ACCOUNT_ID | AWS account ID | (required) |
+| AWS_PROFILE | AWS profile name for authentication | None (uses default credentials) |
 | ECR_REPOSITORY_NAME | ECR repository name | lambda-docker |
 | ECR_IMAGE_TAG | Docker image tag | latest |
 | LAMBDA_FUNCTION_NAME | Lambda function name | lambda-docker-function |
