@@ -34,6 +34,9 @@ AWS_PROFILE = os.environ.get("AWS_PROFILE", None)
 ECR_REPOSITORY_NAME = os.environ.get("ECR_REPOSITORY_NAME", "lambda-docker")
 ECR_IMAGE_TAG = os.environ.get("ECR_IMAGE_TAG", "latest")
 
+# Application Location Configuration
+APP_LOCATION = os.environ.get("APP_LOCATION", None)
+
 # Lambda Configuration
 LAMBDA_FUNCTION_NAME = os.environ.get("LAMBDA_FUNCTION_NAME", "lambda-docker-function")
 LAMBDA_MEMORY_SIZE = int(os.environ.get("LAMBDA_MEMORY_SIZE", "128"))
@@ -47,8 +50,16 @@ LAMBDA_ENVIRONMENT = {
 
 # Project paths
 PROJECT_ROOT = Path(__file__).parent.parent
-DOCKERFILE_PATH = PROJECT_ROOT / "Dockerfile"
-APP_DIR = PROJECT_ROOT / "app"
+
+# Use custom application location if provided
+if APP_LOCATION:
+    APP_ROOT = Path(APP_LOCATION)
+    DOCKERFILE_PATH = APP_ROOT / "Dockerfile"
+    APP_DIR = APP_ROOT / "app"
+else:
+    APP_ROOT = PROJECT_ROOT
+    DOCKERFILE_PATH = PROJECT_ROOT / "Dockerfile"
+    APP_DIR = PROJECT_ROOT / "app"
 
 def get_ecr_repository_uri():
     """Get the ECR repository URI."""
@@ -78,6 +89,25 @@ def get_boto3_session_args():
     
     return session_args
 
+def validate_app_location():
+    """Validate the application location."""
+    if APP_LOCATION:
+        app_path = Path(APP_LOCATION)
+        if not app_path.exists():
+            logger.error(f"Application location does not exist: {APP_LOCATION}")
+            return False
+        
+        dockerfile_path = app_path / "Dockerfile"
+        if not dockerfile_path.exists():
+            logger.error(f"Dockerfile not found at: {dockerfile_path}")
+            return False
+        
+        logger.info(f"Using custom application location: {APP_LOCATION}")
+    else:
+        logger.info(f"Using default application location: {PROJECT_ROOT}")
+    
+    return True
+
 def validate_config():
     """Validate the configuration."""
     if not AWS_ACCOUNT_ID:
@@ -90,6 +120,9 @@ def validate_config():
     
     if not LAMBDA_FUNCTION_NAME:
         logger.error("LAMBDA_FUNCTION_NAME is not set")
+        return False
+    
+    if not validate_app_location():
         return False
     
     logger.info(f"Configuration validated: Region={AWS_REGION}, ECR={ECR_REPOSITORY_NAME}, Lambda={LAMBDA_FUNCTION_NAME}")

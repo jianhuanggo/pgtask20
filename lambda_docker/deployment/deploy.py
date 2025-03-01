@@ -32,6 +32,7 @@ def parse_arguments():
     parser.add_argument("--env-file", type=str, help="Path to .env file")
     parser.add_argument("--ecr-only", action="store_true", help="Deploy to ECR only")
     parser.add_argument("--lambda-only", action="store_true", help="Update Lambda only")
+    parser.add_argument("--app-location", type=str, help="Path to application directory containing Dockerfile")
     return parser.parse_args()
 
 @log_method(level="info")
@@ -51,6 +52,16 @@ def main():
             logger.info(f"Using environment file: {env_file}")
         else:
             logger.error(f"Environment file not found: {env_file}")
+            return False
+    
+    # Set application location if provided
+    if args.app_location:
+        app_location = Path(args.app_location)
+        if app_location.exists():
+            os.environ["APP_LOCATION"] = str(app_location)
+            logger.info(f"Using application location: {app_location}")
+        else:
+            logger.error(f"Application location not found: {app_location}")
             return False
     
     # Validate configuration

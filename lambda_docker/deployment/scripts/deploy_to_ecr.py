@@ -152,9 +152,14 @@ def build_docker_image():
     """Build the Docker image."""
     try:
         image_name = f"{ECR_REPOSITORY_NAME}:{ECR_IMAGE_TAG}"
-        build_command = f"docker build -t {image_name} -f {DOCKERFILE_PATH} {PROJECT_ROOT}"
         
-        output = run_command(build_command, cwd=str(PROJECT_ROOT))
+        # Get the directory containing the Dockerfile
+        dockerfile_dir = DOCKERFILE_PATH.parent
+        
+        # Build the Docker image from the directory containing the Dockerfile
+        build_command = f"docker build -t {image_name} -f {DOCKERFILE_PATH} {dockerfile_dir}"
+        
+        output = run_command(build_command, cwd=str(dockerfile_dir))
         logger.info(f"Docker image built successfully: {image_name}")
         return True
     except Exception as e:
