@@ -41,6 +41,19 @@ APP_LOCATION = os.environ.get("APP_LOCATION", None)
 LAMBDA_FUNCTION_NAME = os.environ.get("LAMBDA_FUNCTION_NAME", "lambda-docker-function")
 LAMBDA_MEMORY_SIZE = int(os.environ.get("LAMBDA_MEMORY_SIZE", "128"))
 LAMBDA_TIMEOUT = int(os.environ.get("LAMBDA_TIMEOUT", "30"))
+LAMBDA_EXECUTION_ROLE = os.environ.get("LAMBDA_EXECUTION_ROLE", "")
+
+# VPC Configuration
+VPC_ENABLED = os.environ.get("VPC_ENABLED", "false").lower() == "true"
+VPC_ID = os.environ.get("VPC_ID", "")
+VPC_SUBNETS = [subnet for subnet in os.environ.get("VPC_SUBNETS", "").split(",") if subnet]
+VPC_SECURITY_GROUPS = [sg for sg in os.environ.get("VPC_SECURITY_GROUPS", "").split(",") if sg]
+
+# IAM Configuration
+IAM_ROLE_NAME = os.environ.get("IAM_ROLE_NAME", f"{LAMBDA_FUNCTION_NAME}-role")
+IAM_ROLE_DESCRIPTION = os.environ.get("IAM_ROLE_DESCRIPTION", f"Role for {LAMBDA_FUNCTION_NAME}")
+IAM_ROLE_RECREATE = os.environ.get("IAM_ROLE_RECREATE", "false").lower() == "true"
+
 LAMBDA_ENVIRONMENT = {
     "Variables": {
         "ENVIRONMENT": os.environ.get("ENVIRONMENT", "development"),
@@ -89,6 +102,23 @@ def get_boto3_session_args():
     
     return session_args
 
+def get_lambda_role_arn():
+    """Get the ARN of the Lambda execution role."""
+    if LAMBDA_EXECUTION_ROLE:
+        logger.info(f"Using provided Lambda execution role: {LAMBDA_EXECUTION_ROLE}")
+        return LAMBDA_EXECUTION_ROLE
+    
+    # Import here to avoid circular imports
+    from lambda_docker.deployment.scripts.manage_iam_role import get_role_arn
+    
+    role_arn = get_role_arn(IAM_ROLE_NAME)
+    if role_arn:
+        logger.info(f"Using existing IAM role: {IAM_ROLE_NAME} with ARN: {role_arn}")
+        return role_arn
+    
+    logger.warning(f"IAM role '{IAM_ROLE_NAME}' not found and LAMBDA_EXECUTION_ROLE not provided")
+    return None
+
 def validate_app_location():
     """Validate the application location."""
     if APP_LOCATION:
@@ -108,6 +138,27 @@ def validate_app_location():
     
     return True
 
+def validate_vpc_config():
+    """Validate the VPC configuration."""
+    if VPC_ENABLED:
+        if not VPC_ID:
+            logger.error("VPC_ID is not set but VPC_ENABLED is true")
+            return False
+        
+        if not VPC_SUBNETS:
+            logger.error("VPC_SUBNETS is not set but VPC_ENABLED is true")
+            return False
+        
+        if not VPC_SECURITY_GROUPS:
+            logger.error("VPC_SECURITY_GROUPS is not set but VPC_ENABLED is true")
+            return False
+        
+        logger.info(f"VPC configuration validated: VPC_ID={VPC_ID}, Subnets={VPC_SUBNETS}, Security Groups={VPC_SECURITY_GROUPS}")
+    else:
+        logger.info("VPC configuration is disabled")
+    
+    return True
+
 def validate_config():
     """Validate the configuration."""
     if not AWS_ACCOUNT_ID:
@@ -123,6 +174,9 @@ def validate_config():
         return False
     
     if not validate_app_location():
+        return False
+    
+    if not validate_vpc_config():
         return False
     
     logger.info(f"Configuration validated: Region={AWS_REGION}, ECR={ECR_REPOSITORY_NAME}, Lambda={LAMBDA_FUNCTION_NAME}")

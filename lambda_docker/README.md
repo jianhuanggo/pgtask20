@@ -126,6 +126,81 @@ LOG_FILE_PATH=/tmp/lambda_deployment.log
 
 ## Deployment
 
+## ECR Repository Management
+
+This project provides scripts for managing ECR repositories:
+
+### Using the Deployment Script
+
+You can use the main deployment script with the `--recreate-ecr` flag to delete and recreate the ECR repository:
+
+```bash
+cd lambda_docker
+python deployment/deploy.py --env-file deployment/.env --recreate-ecr
+```
+
+### Using the Standalone Script
+
+You can also use the standalone script for more fine-grained control:
+
+```bash
+cd lambda_docker
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --check
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --delete --force
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --create
+python deployment/scripts/manage_ecr_repository.py --repository-name my-repo --recreate --force
+```
+
+## IAM Role Management
+
+This project provides scripts for managing IAM roles for Lambda functions:
+
+### Using the Deployment Script
+
+You can use the main deployment script with the `--recreate-role` flag to delete and recreate the IAM role:
+
+```bash
+cd lambda_docker
+python deployment/deploy.py --env-file deployment/.env --recreate-role
+```
+
+### Using the Standalone Script
+
+You can also use the standalone script for more fine-grained control:
+
+```bash
+cd lambda_docker
+python deployment/scripts/manage_iam_role.py --role-name my-role --check
+python deployment/scripts/manage_iam_role.py --role-name my-role --delete
+python deployment/scripts/manage_iam_role.py --role-name my-role --create
+python deployment/scripts/manage_iam_role.py --role-name my-role --recreate
+python deployment/scripts/manage_iam_role.py --role-name my-role --create --vpc-access
+```
+
+## VPC Configuration
+
+You can enable VPC configuration for the Lambda function:
+
+### Using the Deployment Script
+
+```bash
+cd lambda_docker
+python deployment/deploy.py --env-file deployment/.env --vpc-enabled
+```
+
+### Using Environment Variables
+
+You can also configure VPC settings in the `.env` file:
+
+```
+VPC_ENABLED=true
+VPC_ID=vpc-12345678
+VPC_SUBNETS=subnet-12345678,subnet-87654321
+VPC_SECURITY_GROUPS=sg-12345678,sg-87654321
+```
+
+When VPC configuration is enabled, the Lambda function will be deployed with access to the specified VPC, subnets, and security groups. The IAM role will automatically be granted the necessary permissions for VPC access.
+
 ### Custom Dockerfile Location
 
 This project supports specifying a custom Dockerfile location for deployment. You can provide the path to a directory containing a Dockerfile using either:
@@ -188,6 +263,30 @@ To update the Lambda function with an existing ECR image:
 python deployment/deploy.py --env-file deployment/.env --lambda-only
 ```
 
+### Recreate Lambda Function
+
+To delete and recreate the Lambda function:
+
+```bash
+python deployment/deploy.py --env-file deployment/.env --recreate-lambda
+```
+
+### Deploy with VPC Configuration
+
+To deploy the Lambda function with VPC configuration:
+
+```bash
+python deployment/deploy.py --env-file deployment/.env --vpc-enabled
+```
+
+### Deploy with IAM Role Recreation
+
+To deploy the Lambda function with IAM role recreation:
+
+```bash
+python deployment/deploy.py --env-file deployment/.env --recreate-role
+```
+
 ## Local Testing
 
 To test the Lambda function locally:
@@ -240,9 +339,16 @@ The Lambda function and deployment scripts use different logging configurations:
 | ECR_REPOSITORY_NAME | ECR repository name | lambda-docker |
 | ECR_IMAGE_TAG | Docker image tag | latest |
 | LAMBDA_FUNCTION_NAME | Lambda function name | lambda-docker-function |
-| LAMBDA_EXECUTION_ROLE | IAM role ARN for Lambda | (required) |
+| LAMBDA_EXECUTION_ROLE | IAM role ARN for Lambda | (required if IAM_ROLE_NAME not set) |
 | LAMBDA_MEMORY_SIZE | Lambda memory size in MB | 128 |
 | LAMBDA_TIMEOUT | Lambda timeout in seconds | 30 |
+| VPC_ENABLED | Enable VPC configuration | false |
+| VPC_ID | VPC ID for Lambda function | (required if VPC_ENABLED=true) |
+| VPC_SUBNETS | Comma-separated list of subnet IDs | (required if VPC_ENABLED=true) |
+| VPC_SECURITY_GROUPS | Comma-separated list of security group IDs | (required if VPC_ENABLED=true) |
+| IAM_ROLE_NAME | IAM role name for Lambda | lambda-docker-function-role |
+| IAM_ROLE_DESCRIPTION | IAM role description | Role for lambda-docker-function |
+| IAM_ROLE_RECREATE | Delete and recreate IAM role | false |
 | ENVIRONMENT | Deployment environment | development |
 | LOG_LEVEL | Logging level | INFO |
 | LOG_FILE_PATH | Path for log files | /tmp/lambda_deployment.log |
