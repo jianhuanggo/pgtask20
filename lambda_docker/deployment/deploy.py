@@ -33,6 +33,10 @@ def parse_arguments():
     parser.add_argument("--ecr-only", action="store_true", help="Deploy to ECR only")
     parser.add_argument("--lambda-only", action="store_true", help="Update Lambda only")
     parser.add_argument("--app-location", type=str, help="Path to application directory containing Dockerfile")
+    parser.add_argument("--recreate-ecr", action="store_true", help="Delete and recreate the ECR repository")
+    parser.add_argument("--vpc-enabled", action="store_true", help="Enable VPC configuration for Lambda function")
+    parser.add_argument("--recreate-role", action="store_true", help="Delete and recreate the IAM role")
+    parser.add_argument("--recreate-lambda", action="store_true", help="Delete and recreate the Lambda function")
     return parser.parse_args()
 
 @log_method(level="info")
@@ -64,6 +68,16 @@ def main():
             logger.error(f"Application location not found: {app_location}")
             return False
     
+    # Set VPC configuration if enabled
+    if args.vpc_enabled:
+        os.environ["VPC_ENABLED"] = "true"
+        logger.info("VPC configuration enabled for Lambda function")
+    
+    # Set IAM role recreation if enabled
+    if args.recreate_role:
+        os.environ["IAM_ROLE_RECREATE"] = "true"
+        logger.info("IAM role recreation enabled")
+    
     # Validate configuration
     if not validate_config():
         logger.error("Configuration validation failed")
@@ -72,14 +86,18 @@ def main():
     # Deploy to ECR
     if not args.lambda_only:
         logger.info("Deploying to ECR...")
-        if not deploy_to_ecr():
+        if args.recreate_ecr:
+            logger.info("Recreating ECR repository before deployment")
+        if not deploy_to_ecr(recreate_repo=args.recreate_ecr):
             logger.error("Deployment to ECR failed")
             return False
     
     # Update Lambda function
     if not args.ecr_only:
         logger.info("Updating Lambda function...")
-        if not update_lambda():
+        if args.recreate_lambda:
+            logger.info("Recreating Lambda function")
+        if not update_lambda(recreate=args.recreate_lambda):
             logger.error("Lambda function update failed")
             return False
     
